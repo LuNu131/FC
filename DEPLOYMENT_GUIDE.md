@@ -38,11 +38,12 @@ NODE_ENV=production
 **Quan trọng:** Thay thế các giá trị trên bằng credentials thực của bạn từ Supabase Dashboard.
 
 ### 2.3 Build Settings
-Vercel sẽ tự động detect monorepo structure. Đảm bảo:
-- **Framework Preset**: Vite
-- **Build Command**: `cd client && npm install && npm run build`
-- **Output Directory**: `client/dist`
-- **Install Command**: `npm install`
+Vercel sẽ tự động sử dụng config từ `vercel.json`:
+- **Build Command**: `cd client && npm install && npm run build` (tự động từ root package.json)
+- **Output Directory**: `client/dist` (tự động từ vercel.json)
+- **Framework Preset**: Other (để Vercel dùng custom config)
+
+**Không cần config thêm gì**, `vercel.json` đã handle tất cả!
 
 ### 2.4 Deploy
 1. Click **"Deploy"**
@@ -99,8 +100,22 @@ Mở Chrome DevTools → Network:
 
 ## Troubleshooting
 
+### ❌ Missing script: "build"
+**Giải pháp:** Đảm bảo root `package.json` có script:
+```json
+"scripts": {
+  "build": "cd client && npm install && npm run build"
+}
+```
+
 ### ❌ Lỗi 404 khi gọi API
-**Giải pháp:** Kiểm tra `vercel.json` đã đúng routes chưa.
+**Giải pháp:** Kiểm tra `vercel.json` có routes:
+```json
+{
+  "src": "/api/(.*)",
+  "dest": "server/index.js"
+}
+```
 
 ### ❌ Database connection failed
 **Giải pháp:**
