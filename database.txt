@@ -1,0 +1,216 @@
+-- =====================================================
+-- 1. THIẾT LẬP SCHEMA (CẤU TRÚC BẢNG)
+-- =====================================================
+DROP DATABASE IF EXISTS football_db;
+CREATE DATABASE football_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE football_db;
+
+-- Bảng Players (CẤU TRÚC HOÀN CHỈNH)
+CREATE TABLE players (
+    id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    phone VARCHAR(20),
+    dob DATE,
+    height_cm INT,
+    weight_kg INT,
+    position VARCHAR(50),
+    jersey_number INT,
+    image_url TEXT,
+    total_attendance INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- NEW: Chỉ số kỹ năng và chân thuận
+    dominant_foot VARCHAR(10) DEFAULT 'Right',
+    pac INT DEFAULT 50, -- Tốc độ (Pace)
+    sho INT DEFAULT 50, -- Sút (Shooting)
+    pas INT DEFAULT 50, -- Chuyền (Passing)
+    dri INT DEFAULT 50, -- Rê bóng (Dribbling)
+    def INT DEFAULT 50, -- Phòng ngự (Defending)
+    phy INT DEFAULT 50  -- Thể lực (Physical)
+);
+
+-- Bảng Users (Login)
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL, -- Hash của '123'
+    display_name VARCHAR(100),
+    role ENUM('admin', 'player') DEFAULT 'player',
+    player_id INT UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+);
+
+-- Bảng Teams
+CREATE TABLE teams (
+    id VARCHAR(10) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    captain_id INT,
+    color_hex VARCHAR(20) DEFAULT '#000000',
+    FOREIGN KEY (captain_id) REFERENCES players(id) ON DELETE SET NULL
+);
+
+-- Bảng Team Members
+CREATE TABLE team_members (
+    team_id VARCHAR(10),
+    player_id INT,
+    PRIMARY KEY (team_id, player_id),
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+);
+
+-- Bảng Sessions
+CREATE TABLE sessions (
+    id VARCHAR(50) PRIMARY KEY,
+    date DATE NOT NULL,
+    note TEXT,
+    status ENUM('OPEN', 'CLOSED') DEFAULT 'CLOSED',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Bảng Attendance
+CREATE TABLE attendance (
+    session_id VARCHAR(50),
+    player_id INT,
+    checked_in_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (session_id, player_id),
+    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+);
+
+-- Bảng Funds
+CREATE TABLE funds (
+    id VARCHAR(50) PRIMARY KEY,
+    date DATE DEFAULT (CURRENT_DATE),
+    contributor_name VARCHAR(100),
+    amount DECIMAL(15, 2) NOT NULL,
+    note TEXT,
+    image_url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =====================================================
+-- 2. DATA IMPORT
+-- =====================================================
+
+-- 2.1. Insert Players
+INSERT INTO players (id, name, phone, dob, height_cm, weight_kg, position, jersey_number, image_url, total_attendance) VALUES
+(1, 'Trần Quang Lương', '907987126', '2005-01-13', 177, 85, 'Forward', 22, '/images/players/LuNu.jpg', 3),
+(2, 'Trịnh Hoàng Bảo Huy', '375244203', '2004-03-07', 170, 70, 'Forward', 29, '/images/players/HuyNho.jpg', 5),
+(3, 'Nguyễn Bình Phương', '397183437', '2004-12-25', 175, 60, 'Defender', 79, '/images/players/Ca.jpg', 5),
+(4, 'Từ Thanh Dương', '987659210', '2005-02-22', 163, 74, 'Defender', 2, '/images/players/Duong.jpg', 4),
+(5, 'Nguyễn Văn Sơn', '393703247', '2001-10-30', 167, 49, 'Defender', 8, '/images/players/Son.jpg', 1),
+(6, 'Lê Hoàng Lịnh', '397215515', '2005-10-11', 178, 51, 'Defender', 11, '/images/players/Linh.jpg', 3),
+(7, 'Nguyễn Bá Quốc', '336582477', '2004-02-20', 174, 52, 'Defender', 99, '/images/players/Quoc.jpg', 5),
+(8, 'Nguyễn Hoàng Gia Khang', '876408516', '2005-05-23', 175, 65, 'Defender', 98, '/images/players/G.Khang.jpg', 1),
+(9, 'Lê Văn Quang', '333832483', '2005-04-13', 167, 60, 'Defender', 13, '/images/players/Quang.jpg', 2),
+(10, 'Lê Hải Đăng', '353576449', '2005-02-01', 172, 55, 'Defender', 12, '/images/players/Dang.jpg', 0),
+(11, 'Cao Nhật Thịnh', '878403232', '2006-05-03', 177, 74, 'Forward', 10, '/images/players/Thinh.jpg', 2),
+(12, 'Lê Nhật Nam', '333362841', '2005-05-09', 175, 62, 'Midfielder', 9, '/images/players/Nam.jpg', 4),
+(13, 'Đinh Hữu Đạt', '948765060', '2004-01-14', 167, 57, 'Midfielder', 77, '/images/players/DatLon.jpg', 4),
+(14, 'Nguyễn Văn Công', '978946521', '2005-03-03', 173, 57, 'Defender', 97, '/images/players/Cong.jpg', 5),
+(15, 'Huỳnh Trương Khang', '704405501', '2005-11-01', 167, 52, 'Defender', 96, '/images/players/T.Khang.jpg', 3),
+(16, 'Hồ Minh Quân', '776358295', '2005-10-01', 167, 55, 'Defender', 10, '/images/players/Coca.jpg', 4),
+(17, 'Thái Văn Tứ', '393152441', '2005-04-15', 178, 62, 'Defender', 18, '/images/players/Tu.jpg', 2),
+(18, 'Nguyên Đặng Gia Huy', '932735782', '2005-07-28', 180, 87, 'Defender', 17, '/images/players/HuyLon.jpg', 4),
+(19, 'Trần Đình Lộc', '327803915', '2004-01-12', 173, 65, 'Defender', 21, '/images/players/Loc.jpg', 0),
+(20, 'Nguyễn Tiến Đạt', '379135280', '2007-10-17', 175, 70, 'Defender', 95, '/images/players/DatNho.jpg', 2),
+(21, 'Nguyễn Quang Bảo Khôi', '814155540', '2005-09-25', 173, 53, 'Defender', 5, '/images/players/Khoi.jpg', 5),
+(22, 'Trần Duy Trường', '375055809', '2005-09-10', 168, 50, 'Defender', 69, '/images/players/Truong.jpg', 4),
+(23, 'Nguyễn Thanh Tú', '903790927', '2005-01-03', 173, 57, 'Defender', 95, '/images/players/TuNho.jpg', 5);
+
+-- NEW: Gán chỉ số sức mạnh cho cầu thủ
+UPDATE players SET pac=75, sho=70, pas=80, dri=75, def=60, phy=70, dominant_foot='Right' WHERE id=1;
+UPDATE players SET pac=70, sho=65, pas=75, dri=70, def=65, phy=65, dominant_foot='Left' WHERE id=2;
+UPDATE players SET pac=50, sho=50, pas=50, dri=50, def=50, phy=50, dominant_foot='Right' WHERE id>2; -- Các cầu thủ khác (50)
+
+
+-- 2.2. Auto-Create Users
+-- Hash Bcrypt cho '123': $2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i
+INSERT INTO users (username, password, display_name, role, player_id) VALUES
+('quangluong', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Trần Quang Lương', 'admin', 1),
+('baohuy', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Trịnh Hoàng Bảo Huy', 'admin', 2),
+('binhphuong', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Nguyễn Bình Phương', 'player', 3),
+('thanhduong', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Từ Thanh Dương', 'player', 4),
+('vanson', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Nguyễn Văn Sơn', 'player', 5),
+('hoanglinh', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Lê Hoàng Lịnh', 'player', 6),
+('baquoc', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Nguyễn Bá Quốc', 'player', 7),
+('giakhang', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Nguyễn Hoàng Gia Khang', 'player', 8),
+('vanquang', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Lê Văn Quang', 'player', 9),
+('haidang', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Lê Hải Đăng', 'player', 10),
+('nhatthinh', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Cao Nhật Thịnh', 'player', 11),
+('nhatnam', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Lê Nhật Nam', 'player', 12),
+('huudat', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Đinh Hữu Đạt', 'player', 13),
+('vancong', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Nguyễn Văn Công', 'player', 14),
+('truongkhang', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Huỳnh Trương Khang', 'player', 15),
+('minhquan', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Hồ Minh Quân', 'player', 16),
+('vantu', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Thái Văn Tứ', 'player', 17),
+('giahuy', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Nguyên Đặng Gia Huy', 'player', 18),
+('dinhloc', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Trần Đình Lộc', 'player', 19),
+('tiendat', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Nguyễn Tiến Đạt', 'player', 20),
+('baokhoi', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Nguyễn Quang Bảo Khôi', 'player', 21),
+('duytruong', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Trần Duy Trường', 'player', 22),
+('thanhtu', '$2a$10$UbZFvd2E3hmeQeX/aFL0Oun7cV1X5eUbX.nn.pK0kPy/l7mQTIL/i', 'Nguyễn Thanh Tú', 'player', 23);
+
+-- 2.3. Insert Teams
+INSERT INTO teams (id, name, captain_id, color_hex) VALUES
+('t1', 'Đội Xanh', 1, '#10b981'),
+('t2', 'Đội Đỏ', 3, '#ef4444'),
+('t3', 'Đội Vàng', 8, '#f59e0b'),
+('t4', 'Đội Tím', 14, '#a855f7');
+
+-- 2.4. Insert Team Members
+INSERT INTO team_members (team_id, player_id) VALUES
+('t1', 1), ('t1', 2), ('t1', 5), ('t1', 6), ('t1', 9), ('t1', 21),
+('t2', 3), ('t2', 4), ('t2', 7), ('t2', 10), ('t2', 11),
+('t3', 8), ('t3', 12), ('t3', 13), ('t3', 16), ('t3', 17),
+('t4', 14), ('t4', 15), ('t4', 18), ('t4', 19), ('t4', 20);
+
+-- 2.5. Insert Sessions
+INSERT INTO sessions (id, date, note, status, created_at) VALUES
+('s1732952878426', '2025-11-17', 'Sân cầu suối', 'CLOSED', '2025-11-18 05:18:58'),
+('smi63mgmujb1', '2025-11-19', 'Sân cầu suối', 'CLOSED', '2025-11-19 14:29:36'),
+('smi93uaqgrzc', '2025-11-21', 'Sân Cầu Suối', 'CLOSED', '2025-11-21 16:59:00'),
+('smieva551okr', '2025-11-25', 'Sân Cầu Suối', 'CLOSED', '2025-11-25 17:45:59'),
+('smievfbd8n9r', '2025-11-24', 'Sân Cầu Suối', 'CLOSED', '2025-11-25 17:50:01');
+
+-- 2.6. Insert Attendance
+INSERT INTO attendance (session_id, player_id) VALUES
+('s1732952878426', 1), ('s1732952878426', 2), ('s1732952878426', 3), ('s1732952878426', 6), ('s1732952878426', 7), ('s1732952878426', 12), ('s1732952878426', 13), ('s1732952878426', 14), ('s1732952878426', 15), ('s1732952878426', 16), ('s1732952878426', 17), ('s1732952878426', 18), ('s1732952878426', 21), ('s1732952878426', 23),
+('smi63mgmujb1', 1), ('smi63mgmujb1', 2), ('smi63mgmujb1', 3), ('smi63mgmujb1', 4), ('smi63mgmujb1', 6), ('smi63mgmujb1', 7), ('smi63mgmujb1', 9), ('smi63mgmujb1', 13), ('smi63mgmujb1', 16), ('smi63mgmujb1', 18), ('smi63mgmujb1', 21), ('smi63mgmujb1', 22), ('smi63mgmujb1', 23), ('smi63mgmujb1', 14), ('smi63mgmujb1', 17),
+('smi93uaqgrzc', 2), ('smi93uaqgrzc', 3), ('smi93uaqgrzc', 4), ('smi93uaqgrzc', 5), ('smi93uaqgrzc', 7), ('smi93uaqgrzc', 8), ('smi93uaqgrzc', 9), ('smi93uaqgrzc', 11), ('smi93uaqgrzc', 12), ('smi93uaqgrzc', 14), ('smi93uaqgrzc', 16), ('smi93uaqgrzc', 18), ('smi93uaqgrzc', 23), ('smi93uaqgrzc', 22), ('smi93uaqgrzc', 21),
+('smieva551okr', 1), ('smieva551okr', 2), ('smieva551okr', 3), ('smieva551okr', 4), ('smieva551okr', 7), ('smieva551okr', 11), ('smieva551okr', 12), ('smieva551okr', 13), ('smieva551okr', 14), ('smieva551okr', 15), ('smieva551okr', 16), ('smieva551okr', 20), ('smieva551okr', 21), ('smieva551okr', 22), ('smieva551okr', 23),
+('smievfbd8n9r', 23), ('smievfbd8n9r', 22), ('smievfbd8n9r', 21), ('smievfbd8n9r', 18), ('smievfbd8n9r', 15), ('smievfbd8n9r', 14), ('smievfbd8n9r', 13), ('smievfbd8n9r', 12), ('smievfbd8n9r', 7), ('smievfbd8n9r', 6), ('smievfbd8n9r', 4), ('smievfbd8n9r', 3), ('smievfbd8n9r', 2), ('smievfbd8n9r', 20);
+
+-- 2.7. Insert Funds
+INSERT INTO funds (id, date, contributor_name, amount, note, image_url, created_at) VALUES
+('f1', '2025-11-01', 'Trần Quang Lương', 500000, 'Quỹ chung tháng 11', 'https://placehold.co/150/10b981/ffffff?text=Quy', '2025-11-01 09:00:00');
+
+USE football_db;
+
+-- 1. Nâng cấp bảng PLAYERS: Thêm cột lưu Traits (JSON)
+ALTER TABLE players ADD COLUMN traits_json JSON DEFAULT NULL;
+
+-- 2. Tạo bảng CUSTOM_TRAITS (Admin tạo thêm)
+CREATE TABLE custom_traits (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    image_url TEXT,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Nâng cấp bảng SESSIONS: Thêm cột lưu "Icon bí mật"
+ALTER TABLE sessions ADD COLUMN secret_icon_id VARCHAR(50) DEFAULT NULL;
+
+-- 4. Tạo bảng ATTENDANCE_ATTEMPTS (Lưu lịch sử báo danh sai để chặn)
+CREATE TABLE attendance_attempts (
+    session_id VARCHAR(50),
+    player_id INT,
+    attempt_count INT DEFAULT 0,
+    blocked BOOLEAN DEFAULT FALSE,
+    last_attempt_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (session_id, player_id),
+    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+);
