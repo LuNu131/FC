@@ -1,4 +1,4 @@
-const supabase = require("../config/supabase");
+const db = require("../config/db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
@@ -9,30 +9,24 @@ exports.login = async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    const { data: users, error } = await supabase
-      .from("users")
-      .select(
-        `
-        *,
-        players:player_id (
-          id,
-          name,
-          image_url
-        )
-      `
-      )
-      .eq("username", username)
-      .maybeSingle();
+    const [users] = await db.execute(
+      `SELECT u.*, p.name as player_name, p.image_url as player_image
+       FROM users u
+       LEFT JOIN players p ON u.player_id = p.id
+       WHERE u.username = ?`,
+      [username]
+    );
 
-    if (error) throw error;
-    if (!users) {
+    if (users.length === 0) {
       return res.status(401).json({
         success: false,
         message: "Username does not exist",
       });
     }
 
-    const isMatch = await bcrypt.compare(password, users.password);
+    const user = users[0];
+    const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -42,9 +36,9 @@ exports.login = async (req, res) => {
 
     const token = jwt.sign(
       {
-        userId: users.id,
-        role: users.role,
-        playerId: users.player_id,
+        userId: user.id,
+        role: user.role,
+        playerId: user.player_id,
       },
       SECRET_KEY,
       { expiresIn: "7d" }
@@ -54,12 +48,12 @@ exports.login = async (req, res) => {
       success: true,
       token,
       user: {
-        id: users.id,
-        username: users.username,
-        displayName: users.display_name || users.players?.name,
-        role: users.role,
-        playerId: users.player_id,
-        avatar: users.avatar || users.players?.image_url,
+        id: user.id,
+        username: user.username,
+        displayName: user.display_name || user.player_name,
+        role: user.role,
+        playerId: user.player_id,
+        avatar: user.avatar || user.player_image,
       },
     });
   } catch (err) {
@@ -75,37 +69,25 @@ exports.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const { data, error } = await supabase
-      .from("users")
-      .insert([
-        {
-          username,
-          password: passwordHash,
-          display_name: displayName,
-          player_id: playerId || null,
-          role: "player",
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      if (error.code === "23505") {
-        return res.status(400).json({
-          success: false,
-          message: "Username already exists",
-        });
-      }
-      throw error;
-    }
+    const [result] = await db.execute(
+      `INSERT INTO users (username, password, display_name, player_id, role)
+       VALUES (?, ?, ?, ?, 'player')`,
+      [username, passwordHash, displayName, playerId || null]
+    );
 
     res.json({
       success: true,
       message: "Registration successful",
-      userId: data.id,
+      userId: result.insertId,
     });
   } catch (err) {
     console.error("Register Error:", err);
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({
+        success: false,
+        message: "Username already exists",
+      });
+    }
     res.status(500).json({ error: err.message });
   }
 };

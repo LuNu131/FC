@@ -1,16 +1,13 @@
-const supabase = require("../config/supabase");
+const db = require("../config/db");
 
 const sanitizeInt = (val) => (isNaN(parseInt(val)) ? 0 : parseInt(val));
 
 exports.getAllPlayers = async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("players")
-      .select("*")
-      .order("jersey_number", { ascending: true });
-
-    if (error) throw error;
-    res.json(data || []);
+    const [rows] = await db.execute(
+      "SELECT * FROM players ORDER BY jersey_number ASC"
+    );
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -18,16 +15,13 @@ exports.getAllPlayers = async (req, res) => {
 
 exports.getPlayerById = async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("players")
-      .select("*")
-      .eq("id", req.params.id)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (!data) return res.status(404).json({ message: "Player not found" });
-
-    res.json(data);
+    const [rows] = await db.execute("SELECT * FROM players WHERE id = ?", [
+      req.params.id,
+    ]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Player not found" });
+    }
+    res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -37,38 +31,40 @@ exports.createPlayer = async (req, res) => {
   const body = req.body;
 
   try {
-    const traitsJson = typeof body.traits === "object" ? body.traits : [];
+    const traitsJson =
+      typeof body.traits === "object" ? JSON.stringify(body.traits) : "[]";
     const validDob = body.dob && body.dob !== "" ? body.dob : null;
 
-    const playerData = {
-      name: body.name,
-      phone: body.phone || null,
-      dob: validDob,
-      height_cm: sanitizeInt(body.height_cm),
-      weight_kg: sanitizeInt(body.weight_kg),
-      position: body.position,
-      jersey_number: sanitizeInt(body.jerseyNumber),
-      image_url: body.imageUrl || null,
-      dominant_foot: body.dominantFoot || "Right",
-      pac: sanitizeInt(body.pac),
-      sho: sanitizeInt(body.sho),
-      pas: sanitizeInt(body.pas),
-      dri: sanitizeInt(body.dri),
-      def: sanitizeInt(body.def),
-      phy: sanitizeInt(body.phy),
-      traits_json: traitsJson,
-      total_attendance: 0,
-    };
+    const [result] = await db.execute(
+      `INSERT INTO players (name, phone, dob, height_cm, weight_kg, position, jersey_number,
+       image_url, dominant_foot, pac, sho, pas, dri, def, phy, traits_json, total_attendance)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        body.name,
+        body.phone || null,
+        validDob,
+        sanitizeInt(body.height_cm),
+        sanitizeInt(body.weight_kg),
+        body.position,
+        sanitizeInt(body.jerseyNumber),
+        body.imageUrl || null,
+        body.dominantFoot || "Right",
+        sanitizeInt(body.pac),
+        sanitizeInt(body.sho),
+        sanitizeInt(body.pas),
+        sanitizeInt(body.dri),
+        sanitizeInt(body.def),
+        sanitizeInt(body.phy),
+        traitsJson,
+        0,
+      ]
+    );
 
-    const { data, error } = await supabase
-      .from("players")
-      .insert([playerData])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    res.json({ success: true, message: "Player created successfully", data });
+    res.json({
+      success: true,
+      message: "Player created successfully",
+      id: result.insertId,
+    });
   } catch (err) {
     console.error("Create Error:", err);
     res.status(500).json({ success: false, error: err.message });
@@ -79,40 +75,40 @@ exports.updatePlayer = async (req, res) => {
   const body = req.body;
 
   try {
-    const traitsJson = typeof body.traits === "object" ? body.traits : [];
+    const traitsJson =
+      typeof body.traits === "object" ? JSON.stringify(body.traits) : "[]";
     const validDob = body.dob && body.dob !== "" ? body.dob : null;
 
-    const updateData = {
-      name: body.name,
-      phone: body.phone || null,
-      dob: validDob,
-      height_cm: sanitizeInt(body.height_cm),
-      weight_kg: sanitizeInt(body.weight_kg),
-      position: body.position,
-      jersey_number: sanitizeInt(body.jerseyNumber),
-      image_url: body.imageUrl || null,
-      dominant_foot: body.dominantFoot || "Right",
-      pac: sanitizeInt(body.pac),
-      sho: sanitizeInt(body.sho),
-      pas: sanitizeInt(body.pas),
-      dri: sanitizeInt(body.dri),
-      def: sanitizeInt(body.def),
-      phy: sanitizeInt(body.phy),
-      traits_json: traitsJson,
-      updated_at: new Date().toISOString(),
-    };
+    await db.execute(
+      `UPDATE players SET name=?, phone=?, dob=?, height_cm=?, weight_kg=?,
+       position=?, jersey_number=?, image_url=?, dominant_foot=?,
+       pac=?, sho=?, pas=?, dri=?, def=?, phy=?, traits_json=?
+       WHERE id=?`,
+      [
+        body.name,
+        body.phone || null,
+        validDob,
+        sanitizeInt(body.height_cm),
+        sanitizeInt(body.weight_kg),
+        body.position,
+        sanitizeInt(body.jerseyNumber),
+        body.imageUrl || null,
+        body.dominantFoot || "Right",
+        sanitizeInt(body.pac),
+        sanitizeInt(body.sho),
+        sanitizeInt(body.pas),
+        sanitizeInt(body.dri),
+        sanitizeInt(body.def),
+        sanitizeInt(body.phy),
+        traitsJson,
+        req.params.id,
+      ]
+    );
 
-    const { error } = await supabase
-      .from("players")
-      .update(updateData)
-      .eq("id", req.params.id);
-
-    if (error) throw error;
-
-    await supabase
-      .from("users")
-      .update({ display_name: body.name })
-      .eq("player_id", req.params.id);
+    await db.execute("UPDATE users SET display_name=? WHERE player_id=?", [
+      body.name,
+      req.params.id,
+    ]);
 
     res.json({ success: true, message: "Player updated successfully" });
   } catch (err) {
@@ -123,12 +119,7 @@ exports.updatePlayer = async (req, res) => {
 
 exports.deletePlayer = async (req, res) => {
   try {
-    const { error } = await supabase
-      .from("players")
-      .delete()
-      .eq("id", req.params.id);
-
-    if (error) throw error;
+    await db.execute("DELETE FROM players WHERE id=?", [req.params.id]);
     res.json({ message: "Player deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });

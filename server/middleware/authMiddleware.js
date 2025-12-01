@@ -1,38 +1,36 @@
 const jwt = require("jsonwebtoken");
-const supabase = require("../config/supabase");
 require("dotenv").config();
 
 const SECRET_KEY = process.env.JWT_SECRET || "fcdbb_fallback_secret_key";
 
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
+exports.verifyToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ message: "Access token required" });
+    return res.status(403).json({
+      success: false,
+      message: "Access denied! Missing token.",
+    });
   }
 
   jwt.verify(token, SECRET_KEY, (err, decoded) => {
     if (err) {
-      return res.status(403).json({ message: "Invalid or expired token" });
+      console.error("Token Error:", err.message);
+      return res
+        .status(401)
+        .json({ success: false, message: "Session expired!" });
     }
-
-    req.user = {
-      userId: decoded.userId,
-      role: decoded.role,
-      playerId: decoded.playerId,
-    };
-
+    req.user = decoded;
     next();
   });
 };
 
-const isAdmin = async (req, res, next) => {
-  if (req.user.role === "admin") {
-    return next();
+exports.isAdmin = (req, res, next) => {
+  if (req.user.role !== "admin") {
+    return res
+      .status(403)
+      .json({ success: false, message: "Admin access required!" });
   }
-
-  res.status(403).json({ message: "Admin access required" });
+  next();
 };
-
-module.exports = { authenticateToken, isAdmin };
