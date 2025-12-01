@@ -1,38 +1,38 @@
 const jwt = require("jsonwebtoken");
-require("dotenv").config(); // Load env
+const supabase = require("../config/supabase");
+require("dotenv").config();
 
-// Fix: Lấy key từ .env
 const SECRET_KEY = process.env.JWT_SECRET || "fcdbb_fallback_secret_key";
 
-exports.verifyToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(403).json({
-      success: false,
-      message: "⛔ Truy cập bị từ chối! Thiếu Token.",
-    });
+    return res.status(401).json({ message: "Access token required" });
   }
 
   jwt.verify(token, SECRET_KEY, (err, decoded) => {
     if (err) {
-      console.error("Token Error:", err.message);
-      // Trả về 401 chuẩn để Frontend tự logout
-      return res
-        .status(401)
-        .json({ success: false, message: "⚠️ Phiên đăng nhập hết hạn!" });
+      return res.status(403).json({ message: "Invalid or expired token" });
     }
-    req.user = decoded;
+
+    req.user = {
+      userId: decoded.userId,
+      role: decoded.role,
+      playerId: decoded.playerId,
+    };
+
     next();
   });
 };
 
-exports.isAdmin = (req, res, next) => {
-  if (req.user.role !== "admin") {
-    return res
-      .status(403)
-      .json({ success: false, message: "🚫 Chỉ dành cho Quản lý (Admin)!" });
+const isAdmin = async (req, res, next) => {
+  if (req.user.role === "admin") {
+    return next();
   }
-  next();
+
+  res.status(403).json({ message: "Admin access required" });
 };
+
+module.exports = { authenticateToken, isAdmin };

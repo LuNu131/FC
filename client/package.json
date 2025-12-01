@@ -10,15 +10,12 @@
     "backup": "mkdir -p backups && cp public/*.csv backups/backup_$(date +%Y%m%d_%H%M%S)/"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
     "axios": "^1.13.2",
-    "bcryptjs": "^3.0.3",
     "html2canvas": "^1.4.1",
-    "jsonwebtoken": "^9.0.2",
-    "papaparse": "^5.5.3",
     "pinia": "^2.1.7",
     "vue": "^3.4.27",
-    "vue-router": "^4.3.3",
-    "xlsx": "^0.18.5"
+    "vue-router": "^4.3.3"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.5",

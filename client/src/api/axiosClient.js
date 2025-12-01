@@ -1,13 +1,13 @@
 import axios from "axios";
 
-// Tự động chọn URL: localhost nếu dev, /api nếu production
-const baseURL = import.meta.env.DEV ? "http://localhost:3000/api" : "/api";
+const baseURL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3000/api" : "/api");
 
 const axiosClient = axios.create({
   baseURL,
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 30000,
 });
 
 // Gửi Token đi

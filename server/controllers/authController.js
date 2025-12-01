@@ -32,7 +32,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const isMatch = await bcrypt.compare(password, users.password_hash);
+    const isMatch = await bcrypt.compare(password, users.password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -80,7 +80,7 @@ exports.register = async (req, res) => {
       .insert([
         {
           username,
-          password_hash: passwordHash,
+          password: passwordHash,
           display_name: displayName,
           player_id: playerId || null,
           role: "player",
